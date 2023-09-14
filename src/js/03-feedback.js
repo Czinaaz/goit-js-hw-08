@@ -1,48 +1,46 @@
-
 import throttle from 'lodash.throttle';
 
 const form = document.querySelector('.feedback-form');
-const emailInput = form.querySelector('input[name="email"]');
-const messageTextarea = form.querySelector('textarea[name="message"]');
 
+const STORAGE_KEY = 'feedback-form-state';
 
-function saveFormState() {
-    const formData = {
-        email: emailInput.value,
-        message: messageTextarea.value,
+let formState = {
+    email: '',
+    message: ''
+};
+
+const checkStorage = localStorage.getItem(STORAGE_KEY);
+if(checkStorage) {
+    formState = JSON.parse(checkStorage);
+    form.elements.email.value = formState.email;
+    form.elements.message.value = formState.message;
+}
+
+const throttledSave = throttle((data) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+}, 500);
+
+function saveData(evt){
+    formState[evt.target.name] = evt.target.value;
+    throttledSave(formState);
+}
+form.addEventListener('input', saveData);
+
+const sentForm = eventSent => {
+    eventSent.preventDefault();
+    const {
+        elements: {email, message},
+    } = eventSent.currentTarget;
+    const objectData = {
+        email: email.value,
+        message: message.value,
     };
-    localStorage.setItem('feedback-form-state', JSON.stringify(formData));
+    console.log(objectData);
+    localStorage.removeItem(STORAGE_KEY);
+    formState = {
+        email: '',
+        message: ''
+    };
+    form.reset();
 }
-
-
-function loadFormState() {
-    const savedState = localStorage.getItem('feedback-form-state');
-    if (savedState) {
-        const formData = JSON.parse(savedState);
-        emailInput.value = formData.email;
-        messageTextarea.value = formData.message;
-    }
-}
-
-
-const saveFormStateThrottled = throttle(saveFormState, 500);
-
-emailInput.addEventListener('input', saveFormStateThrottled);
-messageTextarea.addEventListener('input', saveFormStateThrottled);
-
-
-window.addEventListener('load', loadFormState);
-
-
-form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    
-
-    localStorage.removeItem('feedback-form-state');
-    emailInput.value = '';
-    messageTextarea.value = '';
-
-  
-    console.log('Email:', emailInput.value);
-    console.log('Message:', messageTextarea.value);
-});
+form.addEventListener('submit', sentForm);
